@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Spiritual Content Bot</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0a18;
+    color: #e0d8ff;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    line-height: 1.8;
+  }
+  a { color: #a78bfa; }
+  h1 { font-size: 1.8rem; color: #e9d5ff; margin-bottom: 8px; }
+  .meta { color: #6b7280; font-size: 0.9rem; margin-bottom: 40px; }
+  h2 { font-size: 1.1rem; color: #c4b5fd; margin: 32px 0 10px; }
+  p  { color: #c4b5fd; margin-bottom: 12px; }
+  ul { padding-left: 20px; color: #c4b5fd; margin-bottom: 12px; }
+  li { margin-bottom: 6px; }
+  .back { display: inline-block; margin-bottom: 32px; color: #a78bfa; text-decoration: none; font-size: 0.9rem; }
+  .highlight {
+    background: #1e1b4b;
+    border-left: 3px solid #7c3aed;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+  <a class="back" href="index.html">← Back</a>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Last updated: June 2026</p>
+
+  <div class="highlight">
+    <p><strong>Summary:</strong> Spiritual Content Bot does not collect, store, or sell any personal data from end users or viewers. API credentials are stored securely as GitHub Secrets and are never exposed publicly.</p>
+  </div>
+
+  <h2>1. Overview</h2>
+  <p>This Privacy Policy describes how Spiritual Content Bot ("we", "the Service") handles information when using our automated content pipeline. We are committed to protecting privacy and minimizing data collection.</p>
+
+  <h2>2. Information We Do NOT Collect</h2>
+  <p>We do not collect any of the following:</p>
+  <ul>
+    <li>Personal information from TikTok or YouTube viewers</li>
+    <li>User account credentials beyond what is required for API authentication</li>
+    <li>Browsing history, location data, or device information</li>
+    <li>Any data from individuals who view the posted content</li>
+  </ul>
+
+  <h2>3. Information Used by the Service</h2>
+  <p>The Service uses the following solely for operational purposes:</p>
+  <ul>
+    <li><strong>API access tokens</strong> — stored as encrypted GitHub Secrets, used only to post content and retrieve basic performance metrics (view counts, likes) for the operated account</li>
+    <li><strong>Performance data</strong> — aggregated, non-personal video statistics (views, likes, shares) stored locally in <code>performance_data.json</code> to improve future content generation</li>
+  </ul>
+
+  <h2>4. Third-Party APIs</h2>
+  <p>The Service interacts with the following third-party APIs. Their privacy practices are governed by their own policies:</p>
+  <ul>
+    <li><a href="https://www.tiktok.com/legal/page/global/privacy-policy/en" target="_blank">TikTok Privacy Policy</a></li>
+    <li><a href="https://policies.google.com/privacy" target="_blank">Google / YouTube Privacy Policy</a></li>
+    <li><a href="https://elevenlabs.io/privacy" target="_blank">ElevenLabs Privacy Policy</a></li>
+    <li><a href="https://www.anthropic.com/privacy" target="_blank">Anthropic Privacy Policy</a></li>
+  </ul>
+
+  <h2>5. Data Storage & Security</h2>
+  <p>All API credentials are stored as encrypted GitHub Actions Secrets and are never written to logs or exposed in the codebase. Performance data files contain only non-personal, aggregated metrics.</p>
+
+  <h2>6. Data Retention</h2>
+  <p>Performance data (video metrics) is retained for 90 days via GitHub Actions artifacts, after which it is automatically deleted. No other data is retained.</p>
+
+  <h2>7. Children's Privacy</h2>
+  <p>The Service is not directed at children under the age of 13. We do not knowingly collect any information from children.</p>
+
+  <h2>8. Changes to This Policy</h2>
+  <p>We may update this Privacy Policy from time to time. The "Last updated" date at the top of this page reflects the most recent revision.</p>
+
+  <h2>9. Contact</h2>
+  <p>For privacy-related inquiries, please open an issue on our GitHub repository.</p>
+</body>
+</html>
