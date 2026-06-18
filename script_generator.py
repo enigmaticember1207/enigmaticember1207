@@ -40,7 +40,8 @@ NARRATION STYLE:
 - Short sentences (under 15 words each)
 - Slow, calming tone — use commas and periods generously for natural pauses
 - Flow: Empathy → Validation → Gentle encouragement
-- Length: 320–350 characters (approx. 65–70 seconds when read aloud at calm pace)
+- Length: 130–150 words (approx. 65–70 seconds when read aloud at calm pace)
+- Count your words — do NOT submit if under 120 words
 
 STRICT RULES:
 - NO mystical/spiritual jargon (universe, manifestation, vibration, soul, energy)
@@ -74,7 +75,7 @@ Narration rules:
 
 Reply in this JSON format only:
 {{"hook":"Opening line to grab attention (under 15 words)",
-"narration":"Full narration 320–350 characters. Calm spoken English. Short sentences with pauses.",
+"narration":"Full narration 130–150 words. Calm spoken English. Short sentences with pauses.",
 "captions":["{zodiac}","Today's energy","Watch out for this","Lucky action","A reminder","You've got this"],
 "tiktok_caption":"TikTok caption + hashtags (#horoscope #{zodiac.lower()} #zodiac #dailyhoroscope)",
 "youtube_title":"{zodiac} Horoscope | {date_str}",
@@ -92,7 +93,7 @@ Narration rules:
 
 Reply in this JSON format only:
 {{"hook":"Opening line (under 15 words, speaks to having a crush)",
-"narration":"Full narration 320–350 characters. Empathy → validation → one gentle nudge.",
+"narration":"Full narration 130–150 words. Empathy → validation → one gentle nudge.",
 "captions":["You like someone","It's okay to feel this","Take your time","Be yourself","Don't overthink","You deserve love"],
 "tiktok_caption":"TikTok caption + hashtags (#loveadvice #crush #lovereading #selflove)",
 "youtube_title":"Love Reading for {date_str} | If You Have a Crush",
@@ -117,7 +118,7 @@ Narration rules:
 
 Reply in this JSON format only:
 {{"hook":"Opening line that names the feeling (under 15 words)",
-"narration":"Full narration 320–350 characters. Empathy → you are not alone → one small truth.",
+"narration":"Full narration 130–150 words. Empathy → you are not alone → one small truth.",
 "captions":["It's okay","You're not alone","You're doing enough","Be gentle with yourself","You matter","Keep going"],
 "tiktok_caption":"TikTok caption + hashtags (#mentalhealth #selfcare #selflove #youmatter)",
 "youtube_title":"Chosen theme title (under 60 characters)",
@@ -141,7 +142,8 @@ Reply in this JSON format only:
 
     # Warn if narration is too short
     narration = script.get("narration", "")
-    if len(narration) < 280:
-        log.warning(f"Narration too short: {len(narration)} chars")
+    word_count = len(narration.split())
+    if word_count < 100:
+        log.warning(f"Narration too short: {word_count} words (target: 130–150)")
 
     return script
