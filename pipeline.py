@@ -7,11 +7,9 @@ GitHub Actions の cron から呼び出される
 import os
 import random
 import logging
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
-# 各モジュールをインポート（後述のファイルを同ディレクトリに配置）
 from script_generator import generate_script, CONTENT_TYPES
 from audio_generator  import generate_audio, compose_video
 from uploader         import upload_tiktok, upload_youtube_short
@@ -22,30 +20,26 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
 
-
 # ──────────────────────────────────────────────
 # 設定
 # ──────────────────────────────────────────────
-BG_VIDEOS_DIR = Path("assets/bg_videos")   # Runway/Pixabay から事前DLした背景映像
+BG_VIDEOS_DIR = Path("assets/bg_videos")
 OUTPUT_DIR    = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# 1日に生成するコンテンツ数（予算・API上限に応じて調整）
 DAILY_CONTENT_COUNT = 3
+
+# TikTok APIキーが登録されていれば投稿、なければスキップ
+TIKTOK_ENABLED = bool(os.environ.get("TIKTOK_ACCESS_TOKEN", "").strip())
 
 
 def select_content_type(insights: dict) -> str:
-    """
-    分析データがあれば高パフォーマンスなタイプを優先しつつ、
-    ランダム性も保ってマンネリを防ぐ
-    """
     if insights.get("best_content_type") and random.random() < 0.6:
         return insights["best_content_type"]
     return random.choice(CONTENT_TYPES)
 
 
 def pick_bg_video(content_type: str) -> str:
-    """コンテンツタイプに合った背景映像を選ぶ"""
     pattern = {
         "horoscope":         "star*.mp4",
         "tarot":             "mystic*.mp4",
@@ -65,6 +59,7 @@ def pick_bg_video(content_type: str) -> str:
 
 def run_pipeline():
     log.info("=== 毎日コンテンツパイプライン開始 ===")
+    log.info(f"TikTok投稿: {'有効' if TIKTOK_ENABLED else '無効（スキップ）'}")
     today = datetime.now().strftime("%Y%m%d")
 
     # Step 0: 前日の分析データを取得して台本生成にフィードバック
@@ -102,39 +97,40 @@ def run_pipeline():
             captions   = script.get("captions", [script.get("hook", ""), narration_text])
             compose_video(audio_path, bg_video, captions, video_path)
 
-            # Step 5: TikTok に投稿
-            log.info("TikTok にアップロード中...")
-            tiktok_caption = script.get("tiktok_caption", narration_text[:150])
-            tt_result = upload_tiktok(video_path, tiktok_caption)
-            log.info(f"TikTok 投稿完了: publish_id={tt_result.get('publish_id')}")
-
-            # Step 6: YouTube Shorts に投稿
+            # Step 5: YouTube Shorts に投稿（常に実行）
             log.info("YouTube Shorts にアップロード中...")
             yt_title = script.get("youtube_title", f"今日の{content_type} {today}")
             yt_tags  = ["占い", "スピリチュアル", "タロット", "星座運勢", "癒し"]
             yt_id    = upload_youtube_short(video_path, yt_title, yt_tags)
-            log.info(f"YouTube 投稿完了: video_id={yt_id}")
-
-            # Step 7: パフォーマンスデータを記録
+            log.info(f"YouTube 投稿完了: https://youtube.com/shorts/{yt_id}")
             save_performance(yt_id, "youtube", content_type, script)
-            save_performance(tt_result.get("publish_id", ""), "tiktok", content_type, script)
+
+            # Step 6: TikTok に投稿（APIキーがある場合のみ）
+            tt_result = None
+            if TIKTOK_ENABLED:
+                log.info("TikTok にアップロード中...")
+                tiktok_caption = script.get("tiktok_caption", narration_text[:150])
+                tt_result = upload_tiktok(video_path, tiktok_caption)
+                log.info(f"TikTok 投稿完了: publish_id={tt_result.get('publish_id')}")
+                save_performance(tt_result.get("publish_id", ""), "tiktok", content_type, script)
+            else:
+                log.info("TikTok スキップ（TIKTOK_ACCESS_TOKEN 未設定）")
 
             results.append({
                 "content_type": content_type,
-                "tiktok": tt_result,
-                "youtube_id": yt_id,
-                "title": yt_title,
+                "youtube_id":   yt_id,
+                "title":        yt_title,
+                "tiktok":       tt_result,
             })
 
         except Exception as e:
             log.error(f"コンテンツ {i+1} の生成中にエラー: {e}", exc_info=True)
-            # 1本失敗しても続行
             continue
 
     log.info("=== パイプライン完了 ===")
     log.info(f"成功: {len(results)}/{DAILY_CONTENT_COUNT} 本")
     for r in results:
-        log.info(f"  [{r['content_type']}] {r['title']}")
+        log.info(f"  [{r['content_type']}] {r['title']} → https://youtube.com/shorts/{r['youtube_id']}")
 
     return results
 
