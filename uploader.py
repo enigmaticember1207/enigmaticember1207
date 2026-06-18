@@ -41,7 +41,7 @@ def upload_youtube_short(
     video_path: str,
     title: str,
     tags: list[str],
-    description: str = "毎日更新中✨ チャンネル登録でラッキーが届く🔮",
+    description: str = "New video every day ✨ Subscribe for your daily horoscope, love reading & encouragement 🔮",
 ) -> str:
     """
     YouTube Shorts（縦型60秒以内）として動画を投稿する。
@@ -60,10 +60,10 @@ def upload_youtube_short(
             "snippet": {
                 "title": full_title,
                 "description": description,
-                "tags": tags + ["Shorts", "占い", "スピリチュアル", "タロット"],
+                "tags": tags + ["Shorts", "horoscope", "selflove", "mentalhealth", "motivation"],
                 "categoryId": "22",          # People & Blogs
-                "defaultLanguage": "ja",
-                "defaultAudioLanguage": "ja",
+                "defaultLanguage": "en",
+                "defaultAudioLanguage": "en",
             },
             "status": {
                 "privacyStatus": "public",
@@ -111,7 +111,7 @@ def upload_youtube_long(
                 "description": description,
                 "tags": tags + ["占い", "スピリチュアル", "タロット占い", "星座"],
                 "categoryId": "22",
-                "defaultLanguage": "ja",
+                "defaultLanguage": "en",
             },
             "status": {
                 "privacyStatus": "public",
