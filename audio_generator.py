@@ -15,9 +15,8 @@ log = logging.getLogger(__name__)
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 
 VOICE_IDS = [
+    "GxhGYQesaQaYKePCZDEC",
     "T7yYq3WpB94yAuOXraRi",
-    "Z5Rahxh8jMhJKEgBfCSS",
-    "PmgfHCGeS5b7sH90BOOJ",
 ]
 
 BGM_DIR = Path("assets/bgm")
@@ -27,7 +26,7 @@ BGM_DIR = Path("assets/bgm")
 
 def generate_audio(text: str, output_path: str) -> str:
     voice_id = random.choice(VOICE_IDS)
-    log.info(f"使用ボイス: {'Sakura' if voice_id == VOICE_IDS[0] else 'Hana'}")
+    log.info(f"使用ボイス: {voice_id}")
 
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
     headers = {
@@ -36,7 +35,7 @@ def generate_audio(text: str, output_path: str) -> str:
     }
     payload = {
         "text": text,
-        "model_id": "eleven_turbo_v2_5",
+        "model_id": "eleven_flash_v2_5",
         "voice_settings": {
             "stability": 0.75,          # 高め = 落ち着いた安定した声
             "similarity_boost": 0.80,
@@ -105,9 +104,9 @@ def _fmt_time(seconds: float) -> str:
 
 def pick_bgm(content_type: str) -> str | None:
     patterns = {
-        "horoscope":         "star*.mp3",
-        "tarot":             "tarot*.mp3",
-        "spiritual_message": "mystic*.mp3",
+        "horoscope": "star*.mp3",
+        "love":      "mystic*.mp3",
+        "encourage": "mystic*.mp3",
     }
     pattern    = patterns.get(content_type, "mystic*.mp3")
     candidates = list(BGM_DIR.glob(pattern))
