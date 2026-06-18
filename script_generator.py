@@ -1,132 +1,127 @@
 """
 script_generator.py
-3本構成：
-  horoscope  - 今日の星座運勢（12星座ローテーション）
-  love       - 今日の恋愛運
-  encourage  - 静かに寄り添う勇気づけ
+3 content types (English):
+  horoscope  - Daily horoscope (12 signs rotation)
+  love       - Love reading for today
+  encourage  - Encouragement / self-love message
 """
 
 import anthropic
 import json
 import random
 import re
+import logging
 from datetime import datetime
 
 client = anthropic.Anthropic()
+log = logging.getLogger(__name__)
 
 CONTENT_TYPES = ["horoscope", "love", "encourage"]
 
 ZODIAC_SIGNS = [
-    "おひつじざ","おうしざ","ふたござ","かにざ","ししざ","おとめざ",
-    "てんびんざ","さそりざ","いてざ","やぎざ","みずがめざ","うおざ"
-]
-
-ZODIAC_KANJI = [
-    "牡羊座","牡牛座","双子座","蟹座","獅子座","乙女座",
-    "天秤座","蠍座","射手座","山羊座","水瓶座","魚座"
+    "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
 ]
 
 def today_zodiac_index() -> int:
     return datetime.now().timetuple().tm_yday % 12
 
-SYSTEM_PROMPT = """あなたは動画のナレーション脚本を書く専門家です。
+SYSTEM_PROMPT = """You are a scriptwriter for short-form video content (TikTok/YouTube Shorts).
 
-【フィールドごとのルール】
-narrationフィールド：
-- ひらがなとカタカナのみ（漢字は一切使わない）
-- 話し言葉で書く。書き言葉は禁止
-- 一文を短くする（20文字以内）
-- 句読点（。、）を多めに入れてゆっくり読めるリズムにする
-- 読み上げると約70秒になる340〜360文字で書く
+TARGET AUDIENCE:
+- People feeling lonely, hurt, or overwhelmed
+- Those struggling with relationships or heartbreak
+- Anyone who needs a gentle push or reassurance
+- People who feel unseen or misunderstood
 
-captionsフィールド：
-- 漢字・ひらがな・カタカナ何でもOK
-- 画面に表示する字幕なので読みやすい表記にする
-- 1フレーズ15文字以内
+NARRATION STYLE:
+- Speak directly to "you" — warm, intimate, like a close friend
+- Simple, everyday English — no jargon or complex words
+- Short sentences (under 15 words each)
+- Slow, calming tone — use commas and periods generously for natural pauses
+- Flow: Empathy → Validation → Gentle encouragement
+- Length: 320–350 characters (approx. 65–70 seconds when read aloud at calm pace)
 
-【共通ルール】
-- テーマを1つに絞る。色々詰め込まない
-- スピリチュアル用語（宇宙・引き寄せ・魂・波動）は絶対に使わない
-
-【ナレーションの流れ】
-①共感（あなたもこんな気持ちでは？）
-②寄り添い（それでいいんだよ）
-③そっと背中を押す（一歩だけ踏み出してみて）
-
-必ずJSON形式のみで返答する"""
+STRICT RULES:
+- NO mystical/spiritual jargon (universe, manifestation, vibration, soul, energy)
+- NO empty guarantees ("everything will be fine", "you'll definitely succeed")
+- NO preachy or lecture-like tone
+- Title and narration MUST match the same theme
+- Reply in JSON format ONLY — no preamble or explanation"""
 
 
 def generate_script(content_type: str, performance_data: dict = None) -> dict:
     today = datetime.now()
-    date_str = today.strftime("%m月%d日")
+    date_str = today.strftime("%B %d")
     idx = today_zodiac_index()
-    zodiac_hira = ZODIAC_SIGNS[idx]
-    zodiac_kanji = ZODIAC_KANJI[idx]
+    zodiac = ZODIAC_SIGNS[idx]
+
+    perf_hint = ""
+    if performance_data and performance_data.get("top_theme"):
+        perf_hint = f"\nNote: Last week's top performer was '{performance_data['top_theme']}'"
 
     prompts = {
 
-        "horoscope": f"""今日（{date_str}）の{zodiac_kanji}の運勢ナレーションを作成。
+        "horoscope": f"""Create a {zodiac} horoscope script for {date_str}.{perf_hint}
 
-テーマ：{zodiac_kanji}の今日の運勢を、{zodiac_kanji}の人だけに語りかける。
-対象：{zodiac_kanji}生まれのひと、今日の運気が気になっているひと。
+Theme: Speak ONLY to {zodiac} — today's energy, what to watch out for, and one lucky action.
+Keep it personal and specific to {zodiac}'s traits. Do NOT mix in other signs.
 
-narrationのルール：
-- ひらがなとカタカナのみ（漢字禁止）
-- 「{zodiac_hira}のひとへ」から始める
-- 今日の運気・気をつけること・ラッキーアクションの3つだけを話す
-- 340〜360文字
+Narration rules:
+- 320–350 characters
+- Calm, spoken English — not written English
+- Start with "{zodiac}..." or "Hey {zodiac}..."
 
-以下のJSON形式のみで返答：
-{{"hook":"{zodiac_kanji}への呼びかけ（ひらがなカタカナのみ・15文字以内）",
-"narration":"ひらがなとカタカナのみ・340〜360文字・話し言葉",
-"captions":["{zodiac_kanji}の運勢","今日の運気","きをつけること","ラッキーアクション","あなたへ","今日も大切に"],
-"tiktok_caption":"今日の{zodiac_kanji}の運勢🔮 #{zodiac_kanji} #占い #運勢 #今日の運勢",
-"youtube_title":"{zodiac_kanji}｜{date_str}の運勢",
-"thumbnail_text":"{zodiac_kanji}の運勢"}}""",
+Reply in this JSON format only:
+{{"hook":"Opening line to grab attention (under 15 words)",
+"narration":"Full narration 320–350 characters. Calm spoken English. Short sentences with pauses.",
+"captions":["{zodiac}","Today's energy","Watch out for this","Lucky action","A reminder","You've got this"],
+"tiktok_caption":"TikTok caption + hashtags (#horoscope #{zodiac.lower()} #zodiac #dailyhoroscope)",
+"youtube_title":"{zodiac} Horoscope | {date_str}",
+"thumbnail_text":"{zodiac} Today"}}""",
 
-        "love": f"""今日（{date_str}）の恋愛運ナレーションを作成。
+        "love": f"""Create a love reading script for {date_str}.{perf_hint}
 
-テーマ：片思い中のひとへ、好きなひとにどう接すればいいか迷っているひとへ。
-対象：片思いで悩んでいるひと1人だけに語りかける。恋人がいるひとは対象外。
+Theme: Speak to someone with a crush or unrequited love — the nervousness, the hope, what to do next.
+Focus on ONE person: someone silently in love. Do NOT address people in relationships.
 
-narrationのルール：
-- ひらがなとカタカナのみ（漢字禁止）
-- 「すきなひとがいるんだね」など共感から始める
-- 片思いの気持ち・勇気の出し方・自分を大切にすることの3つだけを話す
-- 340〜360文字
+Narration rules:
+- 320–350 characters
+- Warm and gentle spoken English
+- Start with empathy: "You like someone, don't you..." or similar
 
-以下のJSON形式のみで返答：
-{{"hook":"片思い中のひとへの呼びかけ（ひらがなカタカナのみ・15文字以内）",
-"narration":"ひらがなとカタカナのみ・340〜360文字・話し言葉",
-"captions":["すきなひとがいるんだね","おもいきって","じぶんをすきに","ゆっくりでいい","あなたならできる","今日も笑顔で"],
-"tiktok_caption":"片思い中のあなたへ💌 #恋愛 #片思い #恋愛運 #恋愛相談",
-"youtube_title":"{date_str}｜片思い中のあなたへ",
-"thumbnail_text":"片思いのあなたへ"}}""",
+Reply in this JSON format only:
+{{"hook":"Opening line (under 15 words, speaks to having a crush)",
+"narration":"Full narration 320–350 characters. Empathy → validation → one gentle nudge.",
+"captions":["You like someone","It's okay to feel this","Take your time","Be yourself","Don't overthink","You deserve love"],
+"tiktok_caption":"TikTok caption + hashtags (#loveadvice #crush #lovereading #selflove)",
+"youtube_title":"Love Reading for {date_str} | If You Have a Crush",
+"thumbnail_text":"You Like Someone"}}""",
 
-        "encourage": f"""今日の勇気づけナレーションを作成。
+        "encourage": f"""Create an encouragement script for {date_str}.{perf_hint}
 
-テーマ候補から今日の1つだけ選んで台本を作ること（複数テーマ混ぜ禁止）：
-- 人間関係でつかれたひとへ
-- じぶんを責めてばかりのひとへ
-- やるきがでないひとへ
-- がんばりすぎてつかれたひとへ
-- くらべてばかりで苦しいひとへ
+Pick ONE theme from this list (do NOT mix themes):
+- For anyone who's been too hard on themselves
+- For anyone exhausted by other people's opinions
+- For anyone who feels like they're falling behind
+- For anyone who hasn't heard "you're doing great" lately
+- For anyone who keeps giving but never receives
+- For anyone who's been crying alone
 
-対象：選んだテーマの状況にいるひと1人だけに語りかける。
+Use the chosen theme as the title. Narration must match exactly.
 
-narrationのルール：
-- ひらがなとカタカナのみ（漢字禁止）
-- 「～なんだね、つかれたね」など深い共感から始める
-- そのテーマ1つだけを丁寧に話す。他のテーマは混ぜない
-- 340〜360文字
+Narration rules:
+- 320–350 characters
+- Quiet, intimate spoken English — like a late-night message from a friend
+- Start by naming the feeling: "You've been really hard on yourself lately..." or similar
 
-以下のJSON形式のみで返答：
-{{"hook":"選んだテーマへの共感フレーズ（ひらがなカタカナのみ・15文字以内）",
-"narration":"ひらがなとカタカナのみ・340〜360文字・話し言葉",
-"captions":["つかれたね","それでいい","じぶんをせめないで","ゆっくりでいい","あなたはひとりじゃない","今日もよくがんばった"],
-"tiktok_caption":"#メンタル #自分を大切に #生きづらい #共感",
-"youtube_title":"選んだテーマ（30文字以内・漢字OK）",
-"thumbnail_text":"サムネ文字（10文字以内・漢字OK）"}}"""
+Reply in this JSON format only:
+{{"hook":"Opening line that names the feeling (under 15 words)",
+"narration":"Full narration 320–350 characters. Empathy → you are not alone → one small truth.",
+"captions":["It's okay","You're not alone","You're doing enough","Be gentle with yourself","You matter","Keep going"],
+"tiktok_caption":"TikTok caption + hashtags (#mentalhealth #selfcare #selflove #youmatter)",
+"youtube_title":"Chosen theme title (under 60 characters)",
+"thumbnail_text":"Short thumbnail text (under 6 words)"}}"""
     }
 
     response = client.messages.create(
@@ -144,13 +139,9 @@ narrationのルール：
 
     script = json.loads(raw)
 
-    # 念のためnarrationから漢字が混入していたら除去ログ
+    # Warn if narration is too short
     narration = script.get("narration", "")
-    kanji_found = re.findall(r'[\u4e00-\u9fff]', narration)
-    if kanji_found:
-        import logging
-        logging.getLogger(__name__).warning(
-            f"narrationに漢字が混入: {''.join(set(kanji_found))}"
-        )
+    if len(narration) < 280:
+        log.warning(f"Narration too short: {len(narration)} chars")
 
     return script

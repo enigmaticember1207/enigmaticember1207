@@ -14,9 +14,11 @@ log = logging.getLogger(__name__)
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 
+# English voices — warm, calm female voices ideal for healing/horoscope content
+# Replace with your preferred ElevenLabs English voice IDs
 VOICE_IDS = [
-    "GxhGYQesaQaYKePCZDEC",
-    "T7yYq3WpB94yAuOXraRi",
+    "EXAVITQu4vr4xnSDxMaL",  # Bella — soft, warm
+    "21m00Tcm4TlvDq8ikWAM",  # Rachel — calm, clear
 ]
 
 BGM_DIR = Path("assets/bgm")
@@ -35,13 +37,13 @@ def generate_audio(text: str, output_path: str) -> str:
     }
     payload = {
         "text": text,
-        "model_id": "eleven_flash_v2_5",
+        "model_id": "eleven_multilingual_v2",
         "voice_settings": {
             "stability": 0.75,          # 高め = 落ち着いた安定した声
             "similarity_boost": 0.80,
             "style": 0.10,              # 低め = 抑えた自然なトーン
             "use_speaker_boost": True,
-            "speed": 1.0,               # 等速
+            "speed": 0.90,              # slightly slower for calm tone
         },
     }
 
@@ -103,13 +105,8 @@ def _fmt_time(seconds: float) -> str:
 # ── BGM 選択 ─────────────────────────────────────────────────────────────
 
 def pick_bgm(content_type: str) -> str | None:
-    patterns = {
-        "horoscope": "star*.mp3",
-        "love":      "mystic*.mp3",
-        "encourage": "mystic*.mp3",
-    }
-    pattern    = patterns.get(content_type, "mystic*.mp3")
-    candidates = list(BGM_DIR.glob(pattern))
+    # すべてのBGMをランダムに使用
+    candidates = list(BGM_DIR.glob("bgm_*.mp3"))
     if not candidates:
         candidates = list(BGM_DIR.glob("*.mp3"))
     if not candidates:
