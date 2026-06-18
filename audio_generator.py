@@ -15,8 +15,9 @@ log = logging.getLogger(__name__)
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 
 VOICE_IDS = [
-    "RBnMinrYKeccY3vaUxlZ",  # Sakura
-    "lhTvHflPVOqgSWyuWQry",  # Hana
+    "T7yYq3WpB94yAuOXraRi",
+    "Z5Rahxh8jMhJKEgBfCSS",
+    "PmgfHCGeS5b7sH90BOOJ",
 ]
 
 BGM_DIR = Path("assets/bgm")
@@ -37,10 +38,11 @@ def generate_audio(text: str, output_path: str) -> str:
         "text": text,
         "model_id": "eleven_multilingual_v2",
         "voice_settings": {
-            "stability": 0.50,
+            "stability": 0.75,          # 高め = 落ち着いた安定した声
             "similarity_boost": 0.80,
-            "style": 0.30,
+            "style": 0.10,              # 低め = 抑えた自然なトーン
             "use_speaker_boost": True,
+            "speed": 0.85,              # 0.85 = ゆっくり（1.0が標準）
         },
     }
 
@@ -130,7 +132,19 @@ def compose_video(
     audio_duration = get_audio_duration(audio_path)
     log.info(f"音声長: {audio_duration:.1f} 秒")
 
-    # 音声長に合わせた字幕を生成
+    # 末尾に2秒の無音パディングを追加（AACエンコード遅延で末尾が切れるのを防ぐ）
+    TAIL_PADDING = 2.0
+    padded_audio_path = audio_path.replace(".mp3", "_padded.mp3")
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-i", audio_path,
+        "-af", f"apad=pad_dur={TAIL_PADDING}",
+        "-c:a", "libmp3lame", "-q:a", "2",
+        padded_audio_path,
+    ], capture_output=True)
+    total_duration = audio_duration + TAIL_PADDING
+
+    # 音声長に合わせた字幕を生成（パディング前の実際の音声長で計算）
     srt_content = generate_srt(captions, audio_duration)
     srt_path = output_path.replace(".mp4", ".srt")
     with open(srt_path, "w", encoding="utf-8") as f:
@@ -167,7 +181,7 @@ def compose_video(
     inputs = [
         "-stream_loop", "-1",   # 背景映像を無限ループ
         "-i", bg_video_path,
-        "-i", audio_path,
+        "-i", padded_audio_path,  # パディング済み音声を使用
     ]
     if bgm_path:
         inputs += ["-i", bgm_path]
@@ -184,7 +198,7 @@ def compose_video(
         + ["-vf", video_filter]
         + audio_args
         + [
-            "-t", str(audio_duration),  # 音声の長さで動画を切る
+            "-t", str(total_duration),  # パディング込みの長さで動画を切る
             "-c:v", "libx264",
             "-preset", "fast",
             "-crf", "23",
@@ -206,4 +220,5 @@ def compose_video(
     log.info(f"動画合成完了: {size_mb:.1f} MB → {output_path}")
 
     Path(srt_path).unlink(missing_ok=True)
+    Path(padded_audio_path).unlink(missing_ok=True)
     return output_path
