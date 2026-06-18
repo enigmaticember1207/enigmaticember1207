@@ -41,7 +41,7 @@ def generate_audio(text: str, output_path: str) -> str:
             "similarity_boost": 0.80,
             "style": 0.10,              # 低め = 抑えた自然なトーン
             "use_speaker_boost": True,
-            "speed": 0.85,              # 0.85 = ゆっくり（1.0が標準）
+            "speed": 1.0,               # 等速
         },
     }
 
@@ -132,7 +132,7 @@ def compose_video(
     log.info(f"音声長: {audio_duration:.1f} 秒")
 
     # 末尾に2秒の無音パディングを追加（AACエンコード遅延で末尾が切れるのを防ぐ）
-    TAIL_PADDING = 2.0
+    TAIL_PADDING = 3.0
     padded_audio_path = audio_path.replace(".mp3", "_padded.mp3")
     subprocess.run([
         "ffmpeg", "-y",
@@ -200,9 +200,10 @@ def compose_video(
             "-t", str(total_duration),  # パディング込みの長さで動画を切る
             "-c:v", "libx264",
             "-preset", "fast",
-            "-crf", "23",
+            "-crf", "28",           # 画質を少し下げてサイズ削減
+            "-vb", "1000k",         # 映像ビットレート上限1Mbps
             "-c:a", "aac",
-            "-b:a", "128k",
+            "-b:a", "96k",          # 音声ビットレート削減
             "-movflags", "+faststart",
             output_path,
         ]
