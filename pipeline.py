@@ -41,9 +41,9 @@ def select_content_type(insights: dict) -> str:
 
 def pick_bg_video(content_type: str) -> str:
     pattern = {
-        "horoscope":         "star*.mp4",
-        "tarot":             "mystic*.mp4",
-        "spiritual_message": "nature*.mp4",
+        "horoscope": "star*.mp4",
+        "love":      "nature*.mp4",
+        "encourage": "mystic*.mp4",
     }.get(content_type, "*.mp4")
 
     videos = list(BG_VIDEOS_DIR.glob(pattern))
