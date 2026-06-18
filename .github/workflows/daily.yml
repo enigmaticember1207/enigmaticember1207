@@ -17,10 +17,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install FFmpeg
+      - name: Install FFmpeg and Japanese fonts
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
 
       - name: Restore performance data cache
         uses: actions/cache@v4
@@ -31,18 +31,16 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
-        
+
       - name: Download background videos and BGM
         run: |
           mkdir -p assets/bg_videos assets/bgm
- 
-          # 背景映像をPixabayから取得（著作権フリー・商用利用OK）
+
           python3 - <<'PYEOF'
           import urllib.request
           import os
- 
-          # Pixabay 無料動画（直リンク）
-          # 星・宇宙・神秘系 - 占い・スピリチュアルコンテンツ向け
+          import subprocess
+
           videos = {
               "assets/bg_videos/star01.mp4":   "https://cdn.pixabay.com/video/2016/09/12/5206-183199461_tiny.mp4",
               "assets/bg_videos/star02.mp4":   "https://cdn.pixabay.com/video/2022/10/27/136420-765932176_tiny.mp4",
@@ -50,7 +48,7 @@ jobs:
               "assets/bg_videos/nature01.mp4": "https://cdn.pixabay.com/video/2021/04/05/70921-535925874_tiny.mp4",
               "assets/bg_videos/nature02.mp4": "https://cdn.pixabay.com/video/2019/04/16/23090-330546028_tiny.mp4",
           }
- 
+
           for path, url in videos.items():
               if not os.path.exists(path):
                   print(f"Downloading {path}...")
@@ -60,30 +58,19 @@ jobs:
                       print(f"  ✅ {path} ({size} KB)")
                   except Exception as e:
                       print(f"  ⚠️ Failed: {e}")
-              else:
-                  print(f"  Skip (exists): {path}")
- 
-          # BGM: 無音ファイルをフォールバックとして生成（実素材は別途配置推奨）
-          bgm_files = [
-              "assets/bgm/mystic_01.mp3",
-              "assets/bgm/star_01.mp3",
-              "assets/bgm/tarot_01.mp3",
-          ]
-          import subprocess
+
+          bgm_files = ["assets/bgm/mystic_01.mp3", "assets/bgm/star_01.mp3", "assets/bgm/tarot_01.mp3"]
           for bgm in bgm_files:
               if not os.path.exists(bgm):
-                  print(f"Generating silent BGM: {bgm}")
                   subprocess.run([
                       "ffmpeg", "-y", "-f", "lavfi",
                       "-i", "anullsrc=r=44100:cl=stereo",
-                      "-t", "60", "-q:a", "9", "-acodec", "libmp3lame",
-                      bgm
+                      "-t", "60", "-q:a", "9", "-acodec", "libmp3lame", bgm
                   ], capture_output=True)
-                  print(f"  ✅ {bgm}")
- 
+                  print(f"  ✅ BGM生成: {bgm}")
+
           print("Assets ready!")
           PYEOF
-
 
       - name: Run content pipeline
         env:
