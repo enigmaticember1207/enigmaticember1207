@@ -32,7 +32,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
         
-              - name: Download background videos and BGM
+      - name: Download background videos and BGM
         run: |
           mkdir -p assets/bg_videos assets/bgm
  
