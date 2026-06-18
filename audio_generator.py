@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 
-# ── 日本語ボイス設定（ランダムで切り替え）──────────────────────────────
 VOICE_IDS = [
     "RBnMinrYKeccY3vaUxlZ",  # Sakura
     "lhTvHflPVOqgSWyuWQry",  # Hana
@@ -56,16 +55,39 @@ def generate_audio(text: str, output_path: str) -> str:
     return output_path
 
 
-# ── 字幕ファイル生成 ──────────────────────────────────────────────────────
+# ── 音声の長さを取得 ──────────────────────────────────────────────────────
 
-def generate_srt(captions: list[str], seconds_per_caption: float = 4.0) -> str:
+def get_audio_duration(audio_path: str) -> float:
+    """ffprobe で音声ファイルの長さ（秒）を取得する"""
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            audio_path,
+        ],
+        capture_output=True, text=True
+    )
+    try:
+        return float(result.stdout.strip())
+    except ValueError:
+        log.warning("音声長の取得に失敗しました。65秒と仮定します。")
+        return 65.0
+
+
+# ── 字幕ファイル生成（音声長に合わせて均等割り）────────────────────────
+
+def generate_srt(captions: list[str], total_duration: float) -> str:
+    """
+    音声の実際の長さに合わせて字幕を均等割りする。
+    """
+    n = len(captions)
+    seconds_per_caption = total_duration / n
     srt = ""
     for i, caption in enumerate(captions, 1):
         start_sec = (i - 1) * seconds_per_caption
         end_sec   = i * seconds_per_caption
-        start = _fmt_time(start_sec)
-        end   = _fmt_time(end_sec)
-        srt += f"{i}\n{start} --> {end}\n{caption}\n\n"
+        srt += f"{i}\n{_fmt_time(start_sec)} --> {_fmt_time(end_sec)}\n{caption}\n\n"
     return srt
 
 
@@ -104,22 +126,25 @@ def compose_video(
     output_path: str,
     content_type: str = "spiritual_message",
 ) -> str:
-    # 字幕 SRT を一時ファイルに保存
-    srt_content = generate_srt(captions)
+    # 音声の実際の長さを取得
+    audio_duration = get_audio_duration(audio_path)
+    log.info(f"音声長: {audio_duration:.1f} 秒")
+
+    # 音声長に合わせた字幕を生成
+    srt_content = generate_srt(captions, audio_duration)
     srt_path = output_path.replace(".mp4", ".srt")
     with open(srt_path, "w", encoding="utf-8") as f:
         f.write(srt_content)
 
     bgm_path = pick_bgm(content_type)
 
-    # 日本語フォントパス（GitHub Actions Ubuntu環境）
+    # 日本語フォントパス
     font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
     if not Path(font_path).exists():
-        # フォールバック
         font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
     subtitle_style = (
-        f"FontName=Noto Sans CJK JP,"
+        "FontName=Noto Sans CJK JP,"
         "FontSize=24,"
         "Bold=1,"
         "PrimaryColour=&H00FFFFFF,"
@@ -130,18 +155,22 @@ def compose_video(
         "MarginV=100"
     )
 
-    inputs = ["-i", bg_video_path, "-i", audio_path]
-    if bgm_path:
-        inputs += ["-i", bgm_path]
-
-    # SRTパスのエスケープ（FFmpeg用）
     srt_escaped = srt_path.replace("'", "\\'").replace(":", "\\:")
 
+    # 背景映像をループ再生して音声長に合わせる
     video_filter = (
         "scale=1080:1920:force_original_aspect_ratio=increase,"
         "crop=1080:1920,"
         f"subtitles='{srt_escaped}':force_style='{subtitle_style}'"
     )
+
+    inputs = [
+        "-stream_loop", "-1",   # 背景映像を無限ループ
+        "-i", bg_video_path,
+        "-i", audio_path,
+    ]
+    if bgm_path:
+        inputs += ["-i", bgm_path]
 
     if bgm_path:
         audio_filter = "[1:a]volume=1.0[narr];[2:a]volume=0.25[bgm];[narr][bgm]amix=inputs=2:duration=shortest[aout]"
@@ -155,12 +184,12 @@ def compose_video(
         + ["-vf", video_filter]
         + audio_args
         + [
+            "-t", str(audio_duration),  # 音声の長さで動画を切る
             "-c:v", "libx264",
             "-preset", "fast",
             "-crf", "23",
             "-c:a", "aac",
             "-b:a", "128k",
-            "-shortest",
             "-movflags", "+faststart",
             output_path,
         ]
